@@ -34,7 +34,7 @@ sudo journalctl -f -u energybridge-to-influxdb.service
 
 ## Usage
 
-* `-client-id`: MQTT Client ID. Defaults to hostname. (default "fermi"). `CLIENT_ID` env for Docker.
+* `-client-id`: MQTT Client ID. Defaults to hostname. `CLIENT_ID` env for Docker.
 * `-energy-bridge-host`: IP or host of the Energy Bridge, eg. '192.168.1.1'. Required. `BRIDGE_HOST` env for Docker.
 * `-energy-bridge-nametag`: Value for the energy_bridge_name tag in InfluxDB. Required. `BRIDGE_NAME_TAG` env for Docker.
 * `-influx-bucket`: InfluxDB bucket. Supply a string in the form 'database/retention-policy'. For the default retention policy, pass just a database name (without the slash character). Required. `INFLUX_BUCKET` env for Docker.
@@ -44,7 +44,8 @@ sudo journalctl -f -u energybridge-to-influxdb.service
 * `-print-usage`: Pass this flag to log every usage message to standard error.
 
 ## Docker
-A docker iamge is also provided that can be configured via environment variables.
+
+A docker image is also provided that can be configured via environment variables.
 
 ## License
 
