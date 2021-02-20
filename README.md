@@ -45,7 +45,7 @@ sudo journalctl -f -u energybridge-to-influxdb.service
 
 ## Docker
 
-A docker image is also provided that can be configured via environment variables.
+A docker image is also provided that can be configured via environment variables. [View it on Docker Hub](https://hub.docker.com/r/cdzombak/energybridge_to_influxdb), or pull it via `docker pull cdzombak/energybridge_to_influxdb`.
 
 ## License
 
