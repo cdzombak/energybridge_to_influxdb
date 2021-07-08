@@ -23,8 +23,10 @@ type instantaneousUsageMsg struct {
 
 func main() {
 	var influxServer = flag.String("influx-server", "", "InfluxDB server, including protocol and port, eg. 'http://192.168.1.1:8086'. Required.")
-	var influxUser = flag.String("influx-username", "", "InfluxDB username.")
-	var influxPass = flag.String("influx-password", "", "InfluxDB password.")
+	var influxOrg = flag.String("influx-org", "", "InfluxDB Org. Required for InfluxDB 2.x.")
+	var influxUser = flag.String("influx-username", "", "InfluxDB username. Optional and only for InfluxDB 1.x.")
+	var influxPass = flag.String("influx-password", "", "InfluxDB password. Optional and only for InfluxDB 1.x.")
+	var influxToken = flag.String("influx-token", "", "InfluxDB token. Required for InfluxDB 2.x.")
 	var influxBucket = flag.String("influx-bucket", "", "InfluxDB bucket. Supply a string in the form 'database/retention-policy'. For the default retention policy, pass just a database name (without the slash character). Required.")
 	var energyBridgeName = flag.String("energy-bridge-nametag", "", "Value for the energy_bridge_name tag in InfluxDB. Required.")
 	var energyBridgeHost = flag.String("energy-bridge-host", "", "IP or host of the Energy Bridge, eg. '192.168.1.1'. Required.")
@@ -56,6 +58,8 @@ func main() {
 	authString := ""
 	if *influxUser != "" || *influxPass != "" {
 		authString = fmt.Sprintf("%s:%s", *influxUser, *influxPass)
+	} else if *influxToken != "" {
+		authString = fmt.Sprintf("%s", *influxToken)
 	}
 	influxClient := influxdb2.NewClient(*influxServer, authString)
 	ctx, cancel := context.WithTimeout(context.Background(), influxTimeout)
@@ -67,7 +71,7 @@ func main() {
 	if health.Status != "pass" {
 		log.Fatalf("influxdb did not pass health check: status %s; message '%s'", health.Status, *health.Message)
 	}
-	influxWriteApi := influxClient.WriteAPIBlocking("", *influxBucket)
+	influxWriteApi := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
 
 	var instantDemandHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		var parsedMsg instantaneousUsageMsg

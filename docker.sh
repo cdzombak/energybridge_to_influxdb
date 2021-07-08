@@ -51,12 +51,20 @@ if [[ $INFLUX_SERVER ]]; then
     args="$args -influx-server $INFLUX_SERVER"
 fi
 
+if [[ $INFLUX_ORG ]]; then
+    args="$args -influx-org $INFLUX_ORG"
+fi
+
 if [[ $INFLUX_USERNAME ]]; then
     args="$args -influx-username $INFLUX_USERNAME"
 fi
 
 if [[ $INFLUX_PASSWORD ]]; then
     args="$args -influx-password $INFLUX_PASSWORD"
+fi
+
+if [[ $INFLUX_TOKEN ]]; then
+    args="$args -influx-token $INFLUX_TOKEN"
 fi
 
 energybridge_to_influxdb $args
