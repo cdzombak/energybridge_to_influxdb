@@ -38,8 +38,10 @@ sudo journalctl -f -u energybridge-to-influxdb.service
 * `-energy-bridge-host`: IP or host of the Energy Bridge, eg. '192.168.1.1'. Required. `BRIDGE_HOST` env for Docker.
 * `-energy-bridge-nametag`: Value for the energy_bridge_name tag in InfluxDB. Required. `BRIDGE_NAME_TAG` env for Docker.
 * `-influx-bucket`: InfluxDB bucket. Supply a string in the form 'database/retention-policy'. For the default retention policy, pass just a database name (without the slash character). Required. `INFLUX_BUCKET` env for Docker.
+* `-influx-org`: InfluxDB org. `INFLUX_ORG` env for Docker. Required for InfluxDB 2.x.
 * `-influx-password`: InfluxDB password. `INFLUX_PASSWORD` env for Docker.
 * `-influx-server`: InfluxDB server, including protocol and port, eg. 'http://192.168.1.1:8086'. Required. `INFLUX_SERVER` env for Docker.
+* `-influx-token`: InfluxDB token. `INFLUX_TOKEN` env for Docker. Required for InfluxDB 2.x.
 * `-influx-username`: InfluxDB username. `INFLUX_USERNAME` env for Docker.
 * `-print-usage`: Pass this flag to log every usage message to standard error.
 
