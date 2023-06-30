@@ -21,6 +21,15 @@ type instantaneousUsageMsg struct {
 	Usage      int   `json:"demand"`
 }
 
+const (
+	influxTimeout = 3 * time.Second
+
+	energyBridgeNameTag = "energy_bridge_name"
+
+	legacyInstantMeasurementName = "instantaneous_usage"
+	newInstantMeasurementName    = "instantaneous_energy_usage"
+)
+
 func main() {
 	var influxServer = flag.String("influx-server", "", "InfluxDB server, including protocol and port, eg. 'http://192.168.1.1:8086'. Required.")
 	var influxOrg = flag.String("influx-org", "", "InfluxDB Org. Required for InfluxDB 2.x.")
@@ -31,6 +40,7 @@ func main() {
 	var energyBridgeName = flag.String("energy-bridge-nametag", "", "Value for the energy_bridge_name tag in InfluxDB. Required.")
 	var energyBridgeHost = flag.String("energy-bridge-host", "", "IP or host of the Energy Bridge, eg. '192.168.1.1'. Required.")
 	var clientId = flag.String("client-id", MustHostname(), "MQTT Client ID. Defaults to hostname.")
+	var useNewInstantMeasurementName = flag.Bool("new-measurement-name", false, "Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.")
 	var printUsage = flag.Bool("print-usage", false, "Log every usage message to standard error.")
 	flag.Parse()
 	if *influxServer == "" || *influxBucket == "" {
@@ -54,7 +64,6 @@ func main() {
 		exit <- 0
 	}()
 
-	const influxTimeout = 3 * time.Second
 	authString := ""
 	if *influxUser != "" || *influxPass != "" {
 		authString = fmt.Sprintf("%s:%s", *influxUser, *influxPass)
@@ -86,10 +95,14 @@ func main() {
 			log.Printf("usage at %s: %d watts", atTime, parsedMsg.Usage)
 		}
 
+		measurementName := legacyInstantMeasurementName
+		if *useNewInstantMeasurementName {
+			measurementName = newInstantMeasurementName
+		}
 		point := influxdb2.NewPoint(
-			"instantaneous_usage",
-			map[string]string{"energy_bridge_name": *(energyBridgeName)}, // tags
-			map[string]interface{}{"watts": parsedMsg.Usage},             // fields
+			measurementName,
+			map[string]string{energyBridgeNameTag: *(energyBridgeName)}, // tags
+			map[string]interface{}{"watts": parsedMsg.Usage},            // fields
 			atTime,
 		)
 		if err := retry.Do(
