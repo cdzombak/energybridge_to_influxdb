@@ -14,6 +14,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
 type instantaneousUsageMsg struct {
@@ -21,13 +22,25 @@ type instantaneousUsageMsg struct {
 	Usage      int   `json:"demand"`
 }
 
+type minuteSummationMsg struct {
+	UnixTimeMs   int64   `json:"time"`
+	AverageUsage float64 `json:"value"`
+
+	Type      string `json:"type"`
+	LocalTime string `json:"local_time"`
+}
+
 const (
 	influxTimeout = 3 * time.Second
+
+	instantTopic         = "event/metering/instantaneous_demand"
+	minuteSummationTopic = "event/metering/summation/minute"
 
 	energyBridgeNameTag = "energy_bridge_name"
 
 	legacyInstantMeasurementName = "instantaneous_usage"
 	newInstantMeasurementName    = "instantaneous_energy_usage"
+	lastMinuteMeasurementName    = "last_minute_energy_usage"
 )
 
 func main() {
@@ -83,33 +96,82 @@ func main() {
 	}
 	influxWriteApi := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
 
-	var instantDemandHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	var mqttMessageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		atTime := time.Now()
 
-		var parsedMsg instantaneousUsageMsg
-		if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
-			log.Printf("failed to parse message '%s': %v", msg.Payload(), err)
+		var point *write.Point
+		if msg.Topic() == minuteSummationTopic {
+			var parsedMsg minuteSummationMsg
+			if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
+				log.Printf("failed to parse message '%s' from topic %s: %v", msg.Payload(), msg.Topic(), err)
+				return
+			}
+
+			msgTime := time.Unix(0, parsedMsg.UnixTimeMs*1000000) // milliseconds -> nanoseconds
+			if !*distrustReceivedMessageTime {
+				delta := atTime.Sub(msgTime)
+				if delta.Abs() > 1*time.Minute {
+					descriptor := "ahead"
+					if delta > 0 {
+						descriptor = "behind"
+					}
+					log.Printf("received message timestamp on topic %s is %s %s of time on this host", msg.Topic(), delta.Abs(), descriptor)
+				}
+
+				atTime = msgTime
+			}
+
+			if *printUsage {
+				log.Printf("average last-minute usage at %s: %.2f watts", atTime, parsedMsg.AverageUsage)
+			}
+
+			point = influxdb2.NewPoint(
+				lastMinuteMeasurementName,
+				map[string]string{energyBridgeNameTag: *(energyBridgeName)},     // tags
+				map[string]interface{}{"average_watts": parsedMsg.AverageUsage}, // fields
+				atTime,
+			)
+		} else if msg.Topic() == instantTopic {
+			var parsedMsg instantaneousUsageMsg
+			if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
+				log.Printf("failed to parse message '%s' from topic %s: %v", msg.Payload(), msg.Topic(), err)
+				return
+			}
+
+			msgTime := time.Unix(0, parsedMsg.UnixTimeMs*1000000) // milliseconds -> nanoseconds
+			if !*distrustReceivedMessageTime {
+				delta := atTime.Sub(msgTime)
+				if delta.Abs() > 5*time.Second {
+					descriptor := "ahead"
+					if delta > 0 {
+						descriptor = "behind"
+					}
+					log.Printf("received message timestamp on topic %s is %s %s of time on this host", msg.Topic(), delta.Abs(), descriptor)
+				}
+
+				atTime = msgTime
+			}
+
+			if *printUsage {
+				log.Printf("usage at %s: %d watts", atTime, parsedMsg.Usage)
+			}
+
+			measurementName := legacyInstantMeasurementName
+			if *useNewInstantMeasurementName {
+				measurementName = newInstantMeasurementName
+			}
+
+			point = influxdb2.NewPoint(
+				measurementName,
+				map[string]string{energyBridgeNameTag: *(energyBridgeName)}, // tags
+				map[string]interface{}{"watts": parsedMsg.Usage},            // fields
+				atTime,
+			)
+		} else {
+			log.Printf("received message on unexpected topic '%s': %v", msg.Topic(), msg.Payload())
 			return
 		}
 
-		if !*distrustReceivedMessageTime {
-			atTime = time.Unix(0, parsedMsg.UnixTimeMs*1000000) // milliseconds -> nanoseconds
-		}
-
-		if *printUsage {
-			log.Printf("usage at %s: %d watts", atTime, parsedMsg.Usage)
-		}
-
-		measurementName := legacyInstantMeasurementName
-		if *useNewInstantMeasurementName {
-			measurementName = newInstantMeasurementName
-		}
-		point := influxdb2.NewPoint(
-			measurementName,
-			map[string]string{energyBridgeNameTag: *(energyBridgeName)}, // tags
-			map[string]interface{}{"watts": parsedMsg.Usage},            // fields
-			atTime,
-		)
 		if err := retry.Do(
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), influxTimeout)
@@ -123,15 +185,20 @@ func main() {
 	}
 
 	broker := fmt.Sprintf("tcp://%s:2883", *energyBridgeHost)
-	const topic = "event/metering/instantaneous_demand"
 
 	var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
 		log.Printf("connected to %s with client ID %s", broker, *clientId)
 
-		if token := client.Subscribe(topic, 1, instantDemandHandler); token.Wait() && token.Error() != nil {
-			log.Fatalf("failed to subscribe to %s: %v", topic, token.Error())
+		if token := client.Subscribe(instantTopic, 1, mqttMessageHandler); token.Wait() && token.Error() != nil {
+			log.Fatalf("failed to subscribe to %s: %v", instantTopic, token.Error())
 		} else {
-			log.Printf("subscribed to topic %s", topic)
+			log.Printf("subscribed to topic %s", instantTopic)
+		}
+
+		if token := client.Subscribe(minuteSummationTopic, 1, mqttMessageHandler); token.Wait() && token.Error() != nil {
+			log.Fatalf("failed to subscribe to %s: %v", minuteSummationTopic, token.Error())
+		} else {
+			log.Printf("subscribed to topic %s", minuteSummationTopic)
 		}
 	}
 	var reconnectHandler mqtt.ReconnectHandler = func(client mqtt.Client, opts *mqtt.ClientOptions) {
