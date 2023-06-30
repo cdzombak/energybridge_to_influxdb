@@ -59,7 +59,7 @@ func main() {
 	if *influxUser != "" || *influxPass != "" {
 		authString = fmt.Sprintf("%s:%s", *influxUser, *influxPass)
 	} else if *influxToken != "" {
-		authString = fmt.Sprintf("%s", *influxToken)
+		authString = *influxToken
 	}
 	influxClient := influxdb2.NewClient(*influxServer, authString)
 	ctx, cancel := context.WithTimeout(context.Background(), influxTimeout)
