@@ -66,10 +66,10 @@ func main() {
 	defer cancel()
 	health, err := influxClient.Health(ctx)
 	if err != nil {
-		log.Fatalf("failed to check inflxidb health: %v", err)
+		log.Fatalf("failed to check InfluxDB health: %v", err)
 	}
 	if health.Status != "pass" {
-		log.Fatalf("influxdb did not pass health check: status %s; message '%s'", health.Status, *health.Message)
+		log.Fatalf("InfluxDB did not pass health check: status %s; message '%s'", health.Status, *health.Message)
 	}
 	influxWriteApi := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
 
@@ -100,7 +100,7 @@ func main() {
 			},
 			retry.Attempts(2),
 		); err != nil {
-			log.Printf("failed to write point to influx: %v", err)
+			log.Printf("failed to write point to Influx: %v", err)
 		}
 	}
 
