@@ -41,6 +41,7 @@ func main() {
 	var energyBridgeHost = flag.String("energy-bridge-host", "", "IP or host of the Energy Bridge, eg. '192.168.1.1'. Required.")
 	var clientId = flag.String("client-id", MustHostname(), "MQTT Client ID. Defaults to hostname.")
 	var useNewInstantMeasurementName = flag.Bool("new-measurement-name", false, "Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.")
+	var distrustReceivedMessageTime = flag.Bool("distrust-message-timestamps", false, "Do not trust the timestamp in MQTT message; instead, use the time the message was received.")
 	var printUsage = flag.Bool("print-usage", false, "Log every usage message to standard error.")
 	flag.Parse()
 	if *influxServer == "" || *influxBucket == "" {
@@ -83,13 +84,17 @@ func main() {
 	influxWriteApi := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
 
 	var instantDemandHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+		atTime := time.Now()
+
 		var parsedMsg instantaneousUsageMsg
 		if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
 			log.Printf("failed to parse message '%s': %v", msg.Payload(), err)
 			return
 		}
 
-		atTime := time.Unix(0, parsedMsg.UnixTimeMs*1000000) // milliseconds -> nanoseconds
+		if !*distrustReceivedMessageTime {
+			atTime = time.Unix(0, parsedMsg.UnixTimeMs*1000000) // milliseconds -> nanoseconds
+		}
 
 		if *printUsage {
 			log.Printf("usage at %s: %d watts", atTime, parsedMsg.Usage)
