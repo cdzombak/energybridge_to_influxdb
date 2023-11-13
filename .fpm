@@ -1,0 +1,6 @@
+-s dir
+--name energybridge_to_influxdb
+--description "Pull electricity usage readings from an Energy Bridge via MQTT and ship them to InfluxDB"
+--url "https://github.com/cdzombak/energybridge_to_influxdb"
+--maintainer "Chris Dzombak <https://www.dzombak.com>"
+--license MIT

@@ -43,6 +43,8 @@ const (
 	lastMinuteMeasurementName    = "last_minute_energy_usage"
 )
 
+var version = "<dev>"
+
 func main() {
 	var influxServer = flag.String("influx-server", "", "InfluxDB server, including protocol and port, eg. 'http://192.168.1.1:8086'. Required.")
 	var influxOrg = flag.String("influx-org", "", "InfluxDB Org. Required for InfluxDB 2.x.")
@@ -52,11 +54,19 @@ func main() {
 	var influxBucket = flag.String("influx-bucket", "", "InfluxDB bucket. Supply a string in the form 'database/retention-policy'. For the default retention policy, pass just a database name (without the slash character). Required.")
 	var energyBridgeName = flag.String("energy-bridge-nametag", "", "Value for the energy_bridge_name tag in InfluxDB. Required.")
 	var energyBridgeHost = flag.String("energy-bridge-host", "", "IP or host of the Energy Bridge, eg. '192.168.1.1'. Required.")
-	var clientId = flag.String("client-id", MustHostname(), "MQTT Client ID. Defaults to hostname.")
+	var clientID = flag.String("client-id", MustHostname(), "MQTT Client ID. Defaults to hostname.")
 	var useNewInstantMeasurementName = flag.Bool("new-measurement-name", false, "Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.")
 	var distrustReceivedMessageTime = flag.Bool("distrust-message-timestamps", false, "Do not trust the timestamp in MQTT message; instead, use the time the message was received.")
+	var heartbeatURL = flag.String("heartbeat-url", "", "URL to GET every 30s, if and only if the program has received an MQTT message in the last 60s.")
 	var printUsage = flag.Bool("print-usage", false, "Log every usage message to standard error.")
+	var printVersion = flag.Bool("version", false, "Print version and exit.")
 	flag.Parse()
+
+	if *printVersion {
+		fmt.Println(version)
+		os.Exit(0)
+	}
+
 	if *influxServer == "" || *influxBucket == "" {
 		fmt.Println("-influx-bucket and -influx-server must be supplied.")
 		os.Exit(1)
@@ -78,6 +88,22 @@ func main() {
 		exit <- 0
 	}()
 
+	var hb Heartbeat
+	var err error
+	if *heartbeatURL != "" {
+		hb, err = NewHeartbeat(&HeartbeatConfig{
+			HeartbeatInterval: 30 * time.Second,
+			LivenessThreshold: 60 * time.Second,
+			HeartbeatURL:      *heartbeatURL,
+			OnError: func(err error) {
+				log.Printf("heartbeat error: %s", err)
+			},
+		})
+		if err != nil {
+			log.Fatalf("failed to create heartbeat client: %v", err)
+		}
+	}
+
 	authString := ""
 	if *influxUser != "" || *influxPass != "" {
 		authString = fmt.Sprintf("%s:%s", *influxUser, *influxPass)
@@ -94,13 +120,22 @@ func main() {
 	if health.Status != "pass" {
 		log.Fatalf("InfluxDB did not pass health check: status %s; message '%s'", health.Status, *health.Message)
 	}
-	influxWriteApi := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
+	influxWriteAPI := influxClient.WriteAPIBlocking(*influxOrg, *influxBucket)
+
+	if hb != nil {
+		hb.Start()
+	}
 
 	var mqttMessageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		atTime := time.Now()
 
+		if hb != nil {
+			hb.Alive(atTime)
+		}
+
 		var point *write.Point
-		if msg.Topic() == minuteSummationTopic {
+		switch msg.Topic() {
+		case minuteSummationTopic:
 			var parsedMsg minuteSummationMsg
 			if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
 				log.Printf("failed to parse message '%s' from topic %s: %v", msg.Payload(), msg.Topic(), err)
@@ -131,7 +166,7 @@ func main() {
 				map[string]interface{}{"average_watts": parsedMsg.AverageUsage}, // fields
 				atTime,
 			)
-		} else if msg.Topic() == instantTopic {
+		case instantTopic:
 			var parsedMsg instantaneousUsageMsg
 			if err := json.Unmarshal(msg.Payload(), &parsedMsg); err != nil {
 				log.Printf("failed to parse message '%s' from topic %s: %v", msg.Payload(), msg.Topic(), err)
@@ -167,7 +202,7 @@ func main() {
 				map[string]interface{}{"watts": parsedMsg.Usage},            // fields
 				atTime,
 			)
-		} else {
+		default:
 			log.Printf("received message on unexpected topic '%s': %v", msg.Topic(), msg.Payload())
 			return
 		}
@@ -176,7 +211,7 @@ func main() {
 			func() error {
 				ctx, cancel := context.WithTimeout(context.Background(), influxTimeout)
 				defer cancel()
-				return influxWriteApi.WritePoint(ctx, point)
+				return influxWriteAPI.WritePoint(ctx, point)
 			},
 			retry.Attempts(2),
 		); err != nil {
@@ -187,19 +222,17 @@ func main() {
 	broker := fmt.Sprintf("tcp://%s:2883", *energyBridgeHost)
 
 	var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-		log.Printf("connected to %s with client ID %s", broker, *clientId)
+		log.Printf("connected to %s with client ID %s", broker, *clientID)
 
 		if token := client.Subscribe(instantTopic, 1, mqttMessageHandler); token.Wait() && token.Error() != nil {
 			log.Fatalf("failed to subscribe to %s: %v", instantTopic, token.Error())
-		} else {
-			log.Printf("subscribed to topic %s", instantTopic)
 		}
+		log.Printf("subscribed to topic %s", instantTopic)
 
 		if token := client.Subscribe(minuteSummationTopic, 1, mqttMessageHandler); token.Wait() && token.Error() != nil {
 			log.Fatalf("failed to subscribe to %s: %v", minuteSummationTopic, token.Error())
-		} else {
-			log.Printf("subscribed to topic %s", minuteSummationTopic)
 		}
+		log.Printf("subscribed to topic %s", minuteSummationTopic)
 	}
 	var reconnectHandler mqtt.ReconnectHandler = func(client mqtt.Client, opts *mqtt.ClientOptions) {
 		log.Printf("reconnecting to %s ...", broker)
@@ -210,7 +243,7 @@ func main() {
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
-	opts.SetClientID(*clientId)
+	opts.SetClientID(*clientID)
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
 	opts.OnReconnecting = reconnectHandler
