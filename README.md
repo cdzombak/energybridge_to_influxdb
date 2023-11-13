@@ -109,7 +109,7 @@ The following table lists the environment variables that can be used to configur
 | `DISTRUST_MSG_TIMESTAMPS` | `-distrust-message-timestamps` |
 | `HEARTBEAT_URL`           | `-heartbeat-url`               |
 
-## Running with Systemd
+## Running on Linux with Systemd
 
 After installing the binary, you can run it as a systemd service.
 
@@ -130,6 +130,19 @@ sudo systemctl start energybridge-to-influxdb
 ```shell
 sudo systemctl status energybridge-to-influxdb
 sudo journalctl -f -u energybridge-to-influxdb.service
+```
+
+## Running on macOS with Launchd
+
+> **Note**
+> This is untested; please open an issue if it doesn't work as expected.
+
+After installing the binary via Homebrew, you can run it as a launchd service.
+- Install the systemd service `com.dzombak.energybridge-to-influxdb.plist` and customize that file as desired (e.g. with the correct CLI options for your deployment):
+```shell
+mkdir -p "$HOME"/Library/LaunchAgents
+curl -sSL https://raw.githubusercontent.com/cdzombak/nut_influx_connector/main/com.dzombak.energybridge-to-influxdb.plist > "$HOME"/Library/LaunchAgents/com.dzombak.energybridge-to-influxdb.plist
+nano "$HOME"/Library/LaunchAgents/com.dzombak.energybridge-to-influxdb.plist
 ```
 
 ## Running with Docker
