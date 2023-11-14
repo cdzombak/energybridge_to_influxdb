@@ -1,5 +1,7 @@
 github.com/avast/retry-go v3.0.0+incompatible h1:4SOWQ7Qs+oroOTQOYnAHqelpCO0biHSxpiH9JdtuBj0=
 github.com/avast/retry-go v3.0.0+incompatible/go.mod h1:XtSnn+n/sHqQIpZ10K1qAevBhOOCWBLXXy3hyiqqBrY=
+github.com/cdzombak/heartbeat v0.0.0-20231114134931-76c1ca318c2c h1:aRLrgZy3zPS5XebC+aqnkPxFkrJxig0cdjKtClrD608=
+github.com/cdzombak/heartbeat v0.0.0-20231114134931-76c1ca318c2c/go.mod h1:pK5GKvyesTKeHFpI4PeJSElTO0m0TqjG/r9PG81yyGA=
 github.com/cyberdelia/templates v0.0.0-20141128023046-ca7fffd4298c/go.mod h1:GyV+0YP4qX0UQ7r2MoYZ+AvYDp12OF5yg4q8rGnyNh4=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
