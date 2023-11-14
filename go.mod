@@ -14,6 +14,6 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	golang.org/x/net v0.0.0-20200425230154-ff2c4b7c35a0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
