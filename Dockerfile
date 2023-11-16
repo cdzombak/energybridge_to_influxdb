@@ -11,6 +11,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${
 
 FROM alpine:3
 ARG BIN_NAME
+RUN apk add --no-cache bash
 COPY --from=builder /src/out/${BIN_NAME} /usr/bin/${BIN_NAME}
 COPY docker.sh /docker.sh
 CMD /docker.sh
