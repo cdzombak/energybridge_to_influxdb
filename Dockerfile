@@ -9,10 +9,9 @@ WORKDIR /src
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${BIN_NAME} .
 
-FROM scratch
+FROM alpine:3
 ARG BIN_NAME
 COPY --from=builder /src/out/${BIN_NAME} /usr/bin/${BIN_NAME}
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY docker.sh /docker.sh
 CMD /docker.sh
 

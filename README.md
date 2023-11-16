@@ -4,10 +4,10 @@ Pull electricity usage readings from an Energy Bridge via MQTT and ship them to 
 
 ## Usage
 
-The following syntax will run `openweather-influxdb-connector`, and the program will keep running until it's sent a SIGINT or SIGTERM signal.
+The following syntax will run `energybridge_to_influxdb`, and the program will keep running until it's sent a SIGINT or SIGTERM signal.
 
 ```text
-openweather-influxdb-connector \
+energybridge_to_influxdb \
     -energy-bridge-host 192.168.1.4 \
     -energy-bridge-nametag "Energy Bridge" \
     -influx-bucket "energy_usage/autogen" \
