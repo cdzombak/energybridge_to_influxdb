@@ -1,10 +1,9 @@
 ARG BIN_NAME=energybridge_to_influxdb
 ARG BIN_VERSION=<unknown>
 
-FROM golang:1 AS builder
+FROM golang:1-alpine AS builder
 ARG BIN_NAME
 ARG BIN_VERSION
-RUN update-ca-certificates
 WORKDIR /src
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${BIN_NAME} .
