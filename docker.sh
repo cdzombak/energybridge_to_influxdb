@@ -78,14 +78,14 @@ if [[ $INFLUX_TOKEN ]]; then
     args="$args -influx-token $INFLUX_TOKEN"
 fi
 
-# Use the new measurement name 'instantaneous_energy_usage' instead of the legacy'instantaneous_usage'.
+# Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.
 if [[ $NEW_MEASUREMENT_NAME ]]; then
-    args="$args -new-measurement-name $NEW_MEASUREMENT_NAME"
+    args="$args -new-measurement-name"
 fi
 
 # Do not trust the timestamp in MQTT message; instead, use the time the message was received.
 if [[ $DISTRUST_MSG_TIMESTAMPS ]]; then
-    args="$args -distrust-message-timestamps $DISTRUST_MSG_TIMESTAMPS"
+    args="$args -distrust-message-timestamps"
 fi
 
 # URL to GET every 30s, if and only if the program has received an MQTT message in the last 60s.
