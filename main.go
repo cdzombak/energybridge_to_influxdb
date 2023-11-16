@@ -125,7 +125,7 @@ func main() {
 
 	if hb != nil {
 		hb.Start()
-		log.Printf("heartbeat started with targewt '%s'", *heartbeatURL)
+		log.Printf("heartbeat started; target '%s'", *heartbeatURL)
 	}
 
 	var mqttMessageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
