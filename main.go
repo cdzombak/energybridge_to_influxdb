@@ -128,7 +128,7 @@ func main() {
 		log.Printf("heartbeat started; target '%s'", *heartbeatURL)
 	}
 
-	var mqttMessageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	var mqttMessageHandler mqtt.MessageHandler = func(_ mqtt.Client, msg mqtt.Message) {
 		atTime := time.Now()
 
 		if hb != nil {
@@ -236,10 +236,10 @@ func main() {
 		}
 		log.Printf("subscribed to topic %s", minuteSummationTopic)
 	}
-	var reconnectHandler mqtt.ReconnectHandler = func(client mqtt.Client, opts *mqtt.ClientOptions) {
+	var reconnectHandler mqtt.ReconnectHandler = func(_ mqtt.Client, _ *mqtt.ClientOptions) {
 		log.Printf("reconnecting to %s ...", broker)
 	}
-	var connectLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
+	var connectLostHandler mqtt.ConnectionLostHandler = func(_ mqtt.Client, err error) {
 		log.Printf("connection lost: %v", err)
 	}
 
