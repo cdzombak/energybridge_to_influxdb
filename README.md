@@ -41,6 +41,7 @@ docker run --rm \
 * `-new-measurement-name`: Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.
 * `-distrust-message-timestamps`: Do not trust the timestamp in MQTT message; instead, use the time the message was received.
 * `-heartbeat-url`: URL to GET every 30s, if and only if the program has received an MQTT message in the last 60s.
+* `-health-port`: If set, run a healthcheck server on this port.
 * `-print-usage`: Log every energy usage message to standard error.
 * `-help`: Print help and exit.
 * `-version`: Print version and exit.
