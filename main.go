@@ -240,7 +240,7 @@ func main() {
 		log.Printf("reconnecting to %s ...", broker)
 	}
 	var connectLostHandler mqtt.ConnectionLostHandler = func(_ mqtt.Client, err error) {
-		log.Printf("connection lost: %v", err)
+		log.Fatalf("connection lost: %v", err)
 	}
 
 	opts := mqtt.NewClientOptions()
