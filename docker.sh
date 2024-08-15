@@ -93,4 +93,4 @@ if [[ $HEARTBEAT_URL ]]; then
     args="$args -heartbeat-url $HEARTBEAT_URL"
 fi
 
-energybridge_to_influxdb $args
+energybridge_to_influxdb -health-port 5555 $args
