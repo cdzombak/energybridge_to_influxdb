@@ -131,10 +131,6 @@ func main() {
 	var mqttMessageHandler mqtt.MessageHandler = func(_ mqtt.Client, msg mqtt.Message) {
 		atTime := time.Now()
 
-		if hb != nil {
-			hb.Alive(atTime)
-		}
-
 		var point *write.Point
 		switch msg.Topic() {
 		case minuteSummationTopic:
@@ -218,6 +214,11 @@ func main() {
 			retry.Attempts(2),
 		); err != nil {
 			log.Printf("failed to write point to Influx: %v", err)
+			return
+		}
+
+		if hb != nil {
+			hb.Alive(atTime)
 		}
 	}
 
