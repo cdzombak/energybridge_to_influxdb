@@ -59,6 +59,7 @@ func main() {
 	var useNewInstantMeasurementName = flag.Bool("new-measurement-name", false, "Use the new measurement name 'instantaneous_energy_usage' instead of the legacy 'instantaneous_usage'.")
 	var distrustReceivedMessageTime = flag.Bool("distrust-message-timestamps", false, "Do not trust the timestamp in MQTT message; instead, use the time the message was received.")
 	var heartbeatURL = flag.String("heartbeat-url", "", "URL to GET every 30s, if and only if the program has received an MQTT message in the last 60s.")
+	var heartbeatPort = flag.Int("health-port", 0, "If set, start a healthcheck server on this port.")
 	var printUsage = flag.Bool("print-usage", false, "Log every usage message to standard error.")
 	var printVersion = flag.Bool("version", false, "Print version and exit.")
 	flag.Parse()
@@ -91,11 +92,12 @@ func main() {
 
 	var hb heartbeat.Heartbeat
 	var err error
-	if *heartbeatURL != "" {
+	if *heartbeatURL != "" || *heartbeatPort != 0 {
 		hb, err = heartbeat.NewHeartbeat(&heartbeat.Config{
 			HeartbeatInterval: 30 * time.Second,
 			LivenessThreshold: 60 * time.Second,
 			HeartbeatURL:      *heartbeatURL,
+			Port:              *heartbeatPort,
 			OnError: func(err error) {
 				log.Printf("heartbeat error: %s", err)
 			},
